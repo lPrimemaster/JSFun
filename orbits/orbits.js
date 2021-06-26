@@ -19,6 +19,16 @@ let sf = 1;
 let pfixed = true;
 let pfindex = 0;
 
+let drop_x = 0;
+let drop_y = 0;
+let drop_vx = 0;
+let drop_vy = 0;
+let released = true;
+let ctrl_mod = false;
+let place = false;
+
+let pcounter = 0;
+
 function NewtonianGravity(M, r)
 {
     let mag = G * M / sqrt(pow(r.x, 2) + pow(r.y, 2));
@@ -85,7 +95,8 @@ function Body(n, x, y, vx, vy, m, r, c)
             beginShape();
             for(let i = 0; i < this.posRecord.length; i++)
             {
-                curveVertex(((this.posRecord[i].x - planets[pfindex].posRecord[i].x) * sf + width / 2) / AUR, ((this.posRecord[i].y - planets[pfindex].posRecord[i].y) * sf + height / 2) / AUR);
+                if(i < planets[pfindex].posRecord.length)
+                    curveVertex(((this.posRecord[i].x - planets[pfindex].posRecord[i].x) * sf + width / 2) / AUR, ((this.posRecord[i].y - planets[pfindex].posRecord[i].y) * sf + height / 2) / AUR);
             }
             endShape();
             stroke(255);
@@ -158,6 +169,13 @@ function setup()
 
 function draw()
 {
+    if(place)
+    {
+        planets.push(new Body("AutoPlanet_" + pcounter.toString(), drop_x - width / 2, drop_y - height / 2, drop_vx * 0.02, drop_vy * 0.02, SaturnMass, 10, color(random(100, 255), random(100, 255), random(100, 255))));
+        ui = new UI();
+        place = false;
+    }
+
     background(0);
     
     push();
@@ -193,6 +211,21 @@ function draw()
     {
         planets[i].showTrail();
     }
+
+    // Drop plannets
+    if(mouseIsPressed && released && ctrl_mod)
+    {
+        drop_x = mouseX;
+        drop_y = mouseY;
+        released = false;
+    }
+    if(!released && ctrl_mod)
+    {
+        drop_vx = mouseX - drop_x;
+        drop_vy = mouseY - drop_y;
+        line(drop_x, drop_y, mouseX, mouseY);
+    }
+
     pop();
 
     ui.show();
@@ -201,11 +234,33 @@ function draw()
     // let cm = calculateCM();
     // fill(0, 255, 0, 50);
     // ellipse(cm.x, cm.y, 20);
+}
 
-    // Drop plannets
-    if(dt == 0)
+function mouseReleased() 
+{
+    if(!released && ctrl_mod)
     {
-        // TODO
+        pcounter++;
+        place = true;
+        released = true;
+        console.log(drop_y, drop_y, drop_vx, drop_vy);
+    }
+}
+
+function keyPressed()
+{
+    if (keyCode === CONTROL) 
+    {
+        ctrl_mod = true;
+    }
+}
+
+function keyReleased()
+{
+    if (keyCode === CONTROL) 
+    {
+        ctrl_mod = false;
+        released = true;
     }
 }
 
