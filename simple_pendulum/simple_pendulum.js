@@ -182,9 +182,11 @@ function draw()
     text('Velocity', width / 2 - 100, 70);
     fill('black');
     text('Position heading', width / 2 - 100, 90);
-    text('g = 9.8 ms', width / 2 - 100, 170);
+    let dtstr = 'dt = ' + dt;
+    text(dtstr, width / 2 - 100, 150);
+    text('g = 9.8 px/s', width / 2 - 100, 170);
     textSize(8);
-    text('2', width / 2 - 45, 170 - textAscent());
+    text('2', width / 2 - 38, 170 - textAscent());
     textSize(12);
     let lstr = 'l = ' + pendulum.length + ' px';
     text(lstr, width / 2 - 100, 190);
