@@ -177,19 +177,23 @@ function draw()
     background(255);
 
     fill('red');
-    text('Acceleration', width / 2 - 100, 50);
-    fill('blue');
-    text('Velocity', width / 2 - 100, 70);
-    fill('black');
-    text('Position heading', width / 2 - 100, 90);
-    let dtstr = 'dt = ' + dt;
-    text(dtstr, width / 2 - 100, 150);
-    text('g = 9.8 px/s', width / 2 - 100, 170);
+    text('Acceleration (x25) px/s', width / 2 - 140, 50);
     textSize(8);
-    text('2', width / 2 - 38, 170 - textAscent());
+    text('2', width / 2 - 18, 50 - textAscent());
+    textSize(12);
+    fill('blue');
+    text('Velocity (x5) px/s', width / 2 - 140, 70);
+    fill('black');
+    text('Position (norm. x50) px', width / 2 - 140, 90);
+    let dtstr = 'dt = ' + dt;
+    text(dtstr, width / 2 - 140, 150);
+    text('g = 9.8 px/s', width / 2 - 140, 170);
+    textSize(8);
+    text('2', width / 2 - 78, 170 - textAscent());
     textSize(12);
     let lstr = 'l = ' + pendulum.length + ' px';
-    text(lstr, width / 2 - 100, 190);
+    text(lstr, width / 2 - 140, 190);
+    text('(px = pixel)', width / 2 - 140, 210);
     fill(255);
 
     //pendulum.update();
