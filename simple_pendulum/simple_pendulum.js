@@ -132,7 +132,7 @@ function Pendulum(length, a)
         chart.add('vel', this.vel.mag() * 5);
         chart.add('pos', abs(asin(p5.Vector.normalize(this.pos).x)) * 50);
         
-
+        
         this.pos.x += this.vel.x * dt;
         this.pos.y += this.vel.y * dt;
     }
