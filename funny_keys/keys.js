@@ -17,15 +17,14 @@ function NoteQueue()
     {
         if(id in this.notes)
         {
-            let d = { on: 0, startFrame: this.frame };
+            let d = { on: 0, startFrame: this.frame, col: color(map(id, 21, 108, 0, 255), 255, 255) };
             this.notes[id].push(d);
         }
         else
         {
             this.notes[id] = [];
-            this.notes[id].push({});
-            this.notes[id][0].on = 0;
-            this.notes[id][0].startFrame = this.frame;
+            let d = { on: 0, startFrame: this.frame, col: color(map(id, 21, 108, 0, 255), 255, 255) };
+            this.notes[id].push(d);
         }
     }
     
@@ -48,11 +47,14 @@ function NoteQueue()
 
     this.draw = function()
     {
+        noStroke();
         fill(255);
+
         for(var k in this.notes)
         {
             for(let iv = 0; iv < this.notes[k].length; iv++)
             {
+                fill(this.notes[k][iv].col);
                 if(this.notes[k][iv].on === 0)
                 {
                     for(let i = 0; i < this.frame - this.notes[k][iv].startFrame; i++)
@@ -81,6 +83,13 @@ function NoteQueue()
             }
         }
         this.frame++;
+
+        for(let i = 0; i < 88; i++)
+        {
+            stroke(0);
+            fill(color(map(i + 21, 21, 108, 0, 255), 255, 255));
+            rect((i+21) * 10, 0, 10, 10);
+        }
     }
 }
 
@@ -91,6 +100,7 @@ function setup()
     nq = new NoteQueue();
     //400 by 400 pixel canvas
     createCanvas(SIZE_X, 700);
+    colorMode(HSB);
 
     WebMidi.enable(function (err) { //check if WebMidi.js is enabled
         if (err) {
