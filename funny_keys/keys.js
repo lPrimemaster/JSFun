@@ -1,13 +1,4 @@
-/*
-This is a p5js sketch that uses the WebMIDI.js library to receive MIDI messages
-*/
-
-//background color variable
-let bgColor;
 const SIZE_X = 1000;
-
-//text to be displayed
-let displayText;
 
 function NoteQueue()
 {
@@ -59,7 +50,7 @@ function NoteQueue()
                 {
                     for(let i = 0; i < this.frame - this.notes[k][iv].startFrame; i++)
                     {
-                        rect(k * 10, 10 * i, 10, 10);
+                        rect((k-15) * 10, 10 * i, 10, 10);
                     }
                 }
                 else if(this.notes[k][iv].on === 1)
@@ -71,7 +62,7 @@ function NoteQueue()
 
                     for(let i = 0; i < this.notes[k][iv].endFrame - this.notes[k][iv].startFrame; i++)
                     {
-                        rect(k * 10, 10 * (i + this.notes[k][iv].counter), 10, 10);
+                        rect((k-15) * 10, 10 * (i + this.notes[k][iv].counter), 10, 10);
                     }
 
                     this.notes[k][iv].counter++;
@@ -88,28 +79,29 @@ function NoteQueue()
         {
             stroke(0);
             fill(color(map(i + 21, 21, 108, 0, 255), 255, 255));
-            rect((i+21) * 10, 0, 10, 10);
+            rect((i + 6) * 10, 0, 10, 10);
         }
     }
 }
 
 let nq;
 
-function setup() 
+function setup()
 {
     nq = new NoteQueue();
-    //400 by 400 pixel canvas
+
+    frameRate(15);
+
     createCanvas(SIZE_X, 700);
     colorMode(HSB);
 
-    WebMidi.enable(function (err) { //check if WebMidi.js is enabled
+    WebMidi.enable(function (err) {
         if (err) {
             console.log("WebMidi could not be enabled.", err);
         } else {
             console.log("WebMidi enabled!");
         }
 
-        //Choose an input port
         inputSoftware = WebMidi.inputs[0];
 
         inputSoftware.addListener('noteon', "all", function (e) {
@@ -122,10 +114,7 @@ function setup()
 	});
 }
 
-function draw() { 
-    //Draw background with background color variable
-    //Will change every time there is a note on
-    //background(bgColor);
+function draw() {
     background(0);
     nq.draw();
 }

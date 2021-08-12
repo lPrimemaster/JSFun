@@ -1,113 +1,232 @@
 let SIZE_X;
 let SIZE_Y;
-let dt = 0.001;
-
-// This is all completely broken. Nice =]
+let dt = 18 / 1000.0;
+let dt2 = dt * dt;
+let damp = 0.03;
+let drag = 1 - damp;
+let gravity = 9.8 * 100;
+let gMCF = 0;
 
 function IX(i, j, sz_i)
 {
     return i + j * sz_i;
 }
 
-function hookForce(p0, p1, k, m, pd)
+function Particle(x, y, m)
 {
-    let v = p5.Vector.sub(p1, p0);
-    let nd = p5.Vector.mult(p5.Vector.normalize(v), pd);
-    v.sub(nd);
-    return v.mult(k / m);
+    this.a = createVector(0, 0);
+    this.pos = createVector(x, y);
+    this.ppos = this.pos;
+    this.original = this.pos;
+    this.mass = m;
+
+    this.addForce = function(force)
+    {
+        this.a.add(force);
+    }
+
+    // So I found this cool stuff Verlet did...
+    this.verletIntegration = function(dt)
+    {
+        let deltaPos = p5.Vector.sub(this.pos, this.ppos);
+        deltaPos.mult(drag).add(this.pos);
+        
+        let newPos = p5.Vector.add(deltaPos, this.a.mult(dt));
+
+        this.ppos = this.pos;
+        this.pos = newPos;
+
+        this.a.mult(0);
+    }
+
+    this.lock = function()
+    {
+        this.pos = this.original;
+        this.ppos = this.original;
+    }
 }
 
-function Cloth(count_x, count_y, pd)
+function Cloth(count_x, count_y, pd, pmass, color)
 {
     this.particles = [];
-    this.particles_v = [];
-    this.pd = pd;
     this.cx = count_x;
     this.cy = count_y;
+    this.pd = pd;
+    this.color = color;
+
+    this.constrains = [];
+
+    this.indexToPos = function(x, y)
+    {
+        return [x * this.pd, y * this.pd];
+    }
 
     this.setup = function()
     {
         this.particles.length = count_x * count_y;
-        this.particles_v.length = count_x * count_y;
-
-        for(let x = 1; x <= count_x; x++)
+        for(let x = 0; x < count_x; x++)
         {
-            for(let y = 1; y <= count_y; y++)
+            for(let y = 0; y < count_y; y++)
             {
-                this.particles[IX(x - 1, y - 1, count_y)] = createVector(x * this.pd, y * this.pd);
-                this.particles_v[IX(x - 1, y - 1, count_y)] = createVector(0, 0);
-                //console.log(this.particles[IX(x, y, count_y)], x, y, this.pd);
+                let pos = this.indexToPos(x, y);
+                this.particles[IX(x, y, count_y)] = new Particle(pos[0], pos[1], pmass);
             }
         }
+
+        // Constrains (edge)
+        for(let x = 0; x < count_x; x++)
+        {
+            for(let y = 0; y < count_y; y++)
+            {
+                if(y < (this.cy - 1) && (x == 0 || x == (this.cx - 1)))
+                {
+                    this.constrains.push([
+                        this.particles[IX(x, y, this.cy)],
+                        this.particles[IX(x, y + 1, this.cy)],
+                        this.pd
+                    ]);
+                }
+
+                if(x < (this.cx - 1) && (y == 0 || y == (this.cy - 1)))
+                {
+                    this.constrains.push([
+                        this.particles[IX(x, y, this.cy)],
+                        this.particles[IX(x + 1, y, this.cy)],
+                        this.pd
+                    ]);
+                }
+            }
+        }
+
+        // Constrains (body)
+        for(let x = 0; x < count_x - 1; x++)
+        {
+            for(let y = 0; y < count_y - 1; y++)
+            {
+                if(x != 0)
+                {
+                    this.constrains.push([
+                        this.particles[IX(x, y, this.cy)],
+                        this.particles[IX(x, y + 1, this.cy)],
+                        this.pd
+                    ]);
+                }
+
+                if(y != 0)
+                {
+                    this.constrains.push([
+                        this.particles[IX(x, y, this.cy)],
+                        this.particles[IX(x + 1, y, this.cy)],
+                        this.pd
+                    ]);
+                }
+            }
+        }
+    }
+
+    // TODO : This needs to track particle positions (maybe raycast2D, its easy)
+    this.closest = function(x, y)
+    {
+        let ix = int(x - (SIZE_X / 2 - this.pd * this.cx / 2 - 0.5));
+        let iy = int(y);
+
+        let six = ix / this.pd;
+        let siy = iy / this.pd;
+
+        console.log(ix, iy);
+
+        if(six > 0 && six < this.cx)
+        {
+            if(siy > 0 && siy < this.cy)
+            {
+                return [int(ix / this.pd), int(iy / this.pd)];
+            }
+        }
+        return [-1, -1];
     }
 
     this.simulate = function()
     {
-        for(let x = 0; x < this.cx; x++)
+        for(let i = 0; i < this.particles.length; i++)
         {
-            for(let y = 0; y < this.cy; y++)
+            let particle = this.particles[i];
+            particle.addForce(createVector(0, gravity));
+            particle.verletIntegration(dt2);
+        }
+
+        this.constrainCloth();
+        
+        // lock top edge
+        // for(let x = 0; x < this.cx; x++)
+        // {
+        //     this.particles[IX(x, 0, this.cy)].lock();
+        // }
+
+        // lock corners
+        this.particles[IX(0, 0, this.cy)].lock();
+        this.particles[IX(this.cx - 1, 0, this.cy)].lock();
+    }
+
+    this.constrainSingle = function(p0, p1, pd)
+    {
+        let diff = p5.Vector.sub(p1.pos, p0.pos);
+        let dst = diff.mag();
+        if(dst > 0)
+        {
+            let halfCorrect = diff.mult(0.5 * (dst - pd) / dst);
+
+            p0.pos.add(halfCorrect);
+            p1.pos.sub(halfCorrect);
+            return halfCorrect.mag() * 2;
+        }
+
+        return 0;
+    }
+
+    this.constrainCloth = function()
+    {
+        let maxCF = 0;
+        for(let i = 0; i < this.constrains.length; i++)
+        {
+            let ct = this.constrains[i];
+            let cf = this.constrainSingle(ct[0], ct[1], ct[2]);
+            if(cf > maxCF)
             {
-                if((x == 0 && y == 0) || (x == this.cx - 1 && y == 0))
-                    continue;
-
-                let self = this.particles[IX(x, y, count_y)];
-
-                let nx_l;
-                if(x != 0)
-                    nx_l = this.particles[IX(x - 1, y, count_y)];
-                else
-                    nx_l = undefined;
-
-                let nx_r;
-                if(x != this.cx - 1)
-                    nx_r = this.particles[IX(x + 1, y, count_y)];
-                else
-                    nx_r = undefined;
-
-                let ny_b;
-                if(y != this.cy - 1)
-                    ny_b = this.particles[IX(x, y + 1, count_y)];
-                else
-                    ny_b = undefined;
-
-                let ny_t;
-                if(y != 0)
-                    ny_t = this.particles[IX(x, y - 1, count_y)];
-                else
-                    ny_t = undefined;
-                
-                let f = createVector(0, 2);
-
-                let k = 3000;
-
-                if(nx_l !== undefined) f.add(hookForce(self, nx_l, k, 10, this.pd));
-                if(nx_r !== undefined) f.add(hookForce(self, nx_r, k, 10, this.pd));
-                if(ny_b !== undefined) f.add(hookForce(self, ny_b, k, 10, this.pd));
-                if(ny_t !== undefined) f.add(hookForce(self, ny_t, k, 10, this.pd));
-
-                //if(x == 3 && y == 3) console.log(f);s
-
-                this.particles_v[IX(x, y, count_y)].x += f.x * dt;
-                this.particles_v[IX(x, y, count_y)].y += f.y * dt;
-
-                let tpv = this.particles_v[IX(x, y, count_y)];
-
-                this.particles[IX(x, y, count_y)].x += tpv.x * dt;
-                this.particles[IX(x, y, count_y)].y += tpv.y * dt;
+                maxCF = cf;
             }
         }
+        gMCF = maxCF;
     }
 
     this.draw = function()
     {
+        noFill();
+        stroke(this.color);
+        smooth();
         push();
         translate(SIZE_X / 2 - this.pd * this.cx / 2, 0);
-        for(let i = 0; i < this.particles.length; i++)
+        
+        for(let x = 0; x < this.cx - 1; x++)
         {
-            let particle = this.particles[i];
-            ellipse(particle.x, particle.y, 5, 5);
+            for(let y = 0; y < this.cy - 1; y++)
+            {
+                let particleTL = this.particles[IX(x, y, this.cy)];
+                let particleTR = this.particles[IX(x + 1, y, this.cy)];
+                let particleBL = this.particles[IX(x, y + 1, this.cy)];
+                let particleBR = this.particles[IX(x + 1, y + 1, this.cy)];
+                beginShape(QUADS);
+                vertex(particleTL.pos.x, particleTL.pos.y);
+                vertex(particleTR.pos.x, particleTR.pos.y);
+                vertex(particleBR.pos.x, particleBR.pos.y);
+                vertex(particleBL.pos.x, particleBL.pos.y);
+                endShape();
+            }
         }
         pop();
+
+        noStroke();
+        fill(255);
+        text('Max Stress (arbitratry) = ' + int(gMCF), width / 2 + SIZE_X / 2 - 300, height / 2 - SIZE_Y / 2 + 103);
     }
 }
 
@@ -119,7 +238,7 @@ function setup()
     SIZE_Y = windowHeight - 20;
     createCanvas(SIZE_X, SIZE_Y);
 
-    cloth = new Cloth(20, 20, 20);
+    cloth = new Cloth(20, 20, 20, 10, 'aqua');
     cloth.setup();
 }
 
@@ -128,4 +247,16 @@ function draw()
     background(51);
     cloth.simulate();
     cloth.draw();
+
+    
+}
+
+function mousePressed() 
+{
+    //console.log(cloth.closest(mouseX, mouseY));
+}
+
+function mouseReleased() 
+{
+
 }
