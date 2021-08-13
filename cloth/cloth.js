@@ -6,6 +6,10 @@ let damp = 0.03;
 let drag = 1 - damp;
 let gravity = 9.8 * 100;
 let gMCF = 0;
+let pick = -1;
+let click_wind = 0;
+
+document.addEventListener('contextmenu', event => event.preventDefault());
 
 function IX(i, j, sz_i)
 {
@@ -44,6 +48,11 @@ function Particle(x, y, m)
         this.pos = this.original;
         this.ppos = this.original;
     }
+
+    this.lockHere = function()
+    {
+        this.pos = this.ppos;
+    }
 }
 
 function Cloth(count_x, count_y, pd, pmass, color)
@@ -53,6 +62,7 @@ function Cloth(count_x, count_y, pd, pmass, color)
     this.cy = count_y;
     this.pd = pd;
     this.color = color;
+    this.locked = [];
 
     this.constrains = [];
 
@@ -124,25 +134,35 @@ function Cloth(count_x, count_y, pd, pmass, color)
         }
     }
 
-    // TODO : This needs to track particle positions (maybe raycast2D, its easy)
+    this.convCoord = function(x, y)
+    {
+        let ix = x - (SIZE_X / 2 - this.pd * this.cx / 2);
+        let iy = y;
+        return createVector(ix, iy);
+    }
+
+    
     this.closest = function(x, y)
     {
-        let ix = int(x - (SIZE_X / 2 - this.pd * this.cx / 2 - 0.5));
-        let iy = int(y);
+        let mpos = this.convCoord(x, y);
 
-        let six = ix / this.pd;
-        let siy = iy / this.pd;
+        let target = this.particles.length;
+        let min = 9999;
 
-        console.log(ix, iy);
-
-        if(six > 0 && six < this.cx)
+        for(let i = 0; i < this.particles.length; i++)
         {
-            if(siy > 0 && siy < this.cy)
+            let p = this.particles[i];
+
+            let dist = p5.Vector.dist(p.pos, mpos);
+
+            if(dist < min)
             {
-                return [int(ix / this.pd), int(iy / this.pd)];
+                min = dist;
+                target = i;
             }
         }
-        return [-1, -1];
+
+        return [target, min];
     }
 
     this.simulate = function()
@@ -151,7 +171,14 @@ function Cloth(count_x, count_y, pd, pmass, color)
         {
             let particle = this.particles[i];
             particle.addForce(createVector(0, gravity));
+            if(click_wind)
+                particle.addForce(createVector(500, 0));
             particle.verletIntegration(dt2);
+        }
+
+        if(pick != -1)
+        {
+            this.particles[pick].pos = this.convCoord(mouseX, mouseY);
         }
 
         this.constrainCloth();
@@ -165,6 +192,11 @@ function Cloth(count_x, count_y, pd, pmass, color)
         // lock corners
         this.particles[IX(0, 0, this.cy)].lock();
         this.particles[IX(this.cx - 1, 0, this.cy)].lock();
+
+        for(let i = 0; i < this.locked.length; i++)
+        {
+            this.particles[this.locked[i]].lockHere();
+        }
     }
 
     this.constrainSingle = function(p0, p1, pd)
@@ -247,16 +279,27 @@ function draw()
     background(51);
     cloth.simulate();
     cloth.draw();
-
-    
 }
 
 function mousePressed() 
 {
-    //console.log(cloth.closest(mouseX, mouseY));
+    let arr = cloth.closest(mouseX, mouseY);
+    //click_wind = 1;
+
+    if(arr[1] < 25)
+    {
+        pick = arr[0];
+    }
+    else
+    {
+        pick = -1;
+    }
 }
 
-function mouseReleased() 
+function mouseReleased()
 {
-
+    click_wind = 0;
+    if(pick != -1 && mouseButton === RIGHT)
+        cloth.locked.push(pick);
+    pick = -1;
 }
