@@ -46,6 +46,19 @@ function DoublePendulum(length1, length2, mass1, mass2, angle1, angle2, color_va
         stroke(0);
         fill(this.color_val);
         ellipse(this.x2, this.y2, 10, 10);
+
+        for(let i=0; i<this.pointsx.length-1; i++){
+            let px1 = this.pointsx[i];
+            let px2 = this.pointsx[i+1];
+            let py1 = this.pointsy[i];
+            let py2 = this.pointsy[i+1];
+    
+            let alpha = 0.5*i/this.pointsx.length;
+    
+            stroke(this.color_val);
+            strokeWeight(alpha)
+            line(px1, py1, px2, py2);
+        }
     }
 
     this.accCalc = function(){
@@ -88,19 +101,6 @@ function DoublePendulum(length1, length2, mass1, mass2, angle1, angle2, color_va
         if(this.pointsx.length > maxPathLength){
             this.pointsx.shift();
             this.pointsy.shift();
-        }
-    
-        for(let i=0; i<this.pointsx.length-1; i++){
-            let px1 = this.pointsx[i];
-            let px2 = this.pointsx[i+1];
-            let py1 = this.pointsy[i];
-            let py2 = this.pointsy[i+1];
-    
-            let alpha = 0.5*i/this.pointsx.length;
-    
-            stroke(this.color_val);
-            strokeWeight(alpha)
-            line(px1, py1, px2, py2);
         }
     }
 
