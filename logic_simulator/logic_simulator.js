@@ -198,7 +198,7 @@ class Gate
 
 class Switch
 {
-    
+
 }
 class UIButton
 {
@@ -419,7 +419,7 @@ function mousePressed()
         }
         else
         {
-            let gate_output_pos = readyToSelect.gate.outputPos();
+            let gate_output_pos = readyToSelect.gate.outputPosAlways();
             if(gate_output_pos != null)
             {
                 lineStart = {x: gate_output_pos.x, y: gate_output_pos.y};
