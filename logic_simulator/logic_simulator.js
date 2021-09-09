@@ -26,6 +26,12 @@ function clone(obj) {
     return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj);
 }
 
+// TODO : Load these via some fancy stuff later on
+function elementsToBase64()
+{
+    return btoa(JSON.stringify(elements));
+}
+
 class Gate
 {
     constructor(x, y, type, isize, tick)
@@ -196,9 +202,116 @@ class Gate
     }
 }
 
-class Switch
+class LED extends Gate
 {
+    constructor(x, y, type, isize, tick)
+    {
+        super(x, y, "LED", 1, tick);
+        this.h = 50;
+        this.w = 50;
 
+        this.lb = this.x - this.w / 2;
+        this.rb = this.x + this.w / 2;
+        this.tb = this.y - this.h / 2;
+        this.bb = this.y + this.h / 2;
+    }
+
+    outputPos()
+    {
+        return null;
+    }
+
+    outputPosAlways()
+    {
+        return null;
+    }
+
+    draw()
+    {
+        rectMode(CENTER);
+        noFill();
+        stroke(255);
+        strokeWeight(2);
+
+        // Out
+        if(this.output == LOW)
+                fill('red');
+            else
+                fill('green');
+        rect(this.x, this.y, this.w, this.h);
+
+        // In
+        let x = this.x - this.w / 2;
+        let y = this.y - this.h / 2 + 25;
+
+        if(this.inputs[0] == LOW)
+            fill('red');
+        else
+            fill('green');
+        ellipse(x, y, 10);
+
+        if(this.inputsRef[0] != null)
+        {
+            let out = this.inputsRef[0].outputPosAlways();
+            line(x, y, out.x, out.y);
+        }
+
+        fill(255);
+        strokeWeight(0.5);
+        textAlign(CENTER);
+        text(this.type, this.x, this.y + 4);
+    }
+}
+
+class Switch extends Gate
+{
+    constructor(x, y, type, isize, tick)
+    {
+        super(x, y, "SWT", 1, tick);
+        this.h = 30;
+        this.w = 50;
+
+        this.lb = this.x - this.w / 2;
+        this.rb = this.x + this.w / 2;
+        this.tb = this.y - this.h / 2;
+        this.bb = this.y + this.h / 2;
+    }
+
+    firstAvailableInputPos()
+    {
+        return null;
+    }
+
+    firstAvailableInput()
+    {
+        return null;
+    }
+
+    click()
+    {
+        this.inputs[0] = !this.inputs[0];
+    }
+
+    draw()
+    {
+        rectMode(CENTER);
+        noFill();
+        stroke(255);
+        strokeWeight(2);
+
+        // Out
+        if(this.output == LOW)
+            fill('red');
+        else
+            fill('green');
+        rect(this.x, this.y, this.w, this.h);
+        ellipse(this.x + this.w / 2, this.y, 10);
+
+        fill(255);
+        strokeWeight(0.5);
+        textAlign(CENTER);
+        text(this.type, this.x, this.y + 4);
+    }
 }
 class UIButton
 {
@@ -224,7 +337,7 @@ class UIButton
     {
         if(bounded(mouseX, this.lb, this.rb) && bounded(mouseY, this.tb, this.bb))
         {
-            console.log("Clicked on ", this.p);
+            //console.log("Clicked on ", this.p);
             g_selection = new this.oco(mouseX, mouseY, this.type, this.isize, this.tick);
             return true;
         }
@@ -251,6 +364,7 @@ class UI
     constructor()
     {
         this.buttons = [];
+        // Logic gates
         this.buttons.push(new UIButton(70, SIZE_Y - 20, 50, 20, "2-AND", Gate, "AND", 2, (inputs, int, pout) => {
             let out = HIGH;
             for(let i of inputs)
@@ -305,6 +419,14 @@ class UI
         }));
         this.buttons.push(new UIButton(420, SIZE_Y - 20, 50, 20, "NOT", Gate, "NOT", 1, (inputs, int, pout) => {
             return !inputs[0];
+        }));
+
+        // Others
+        this.buttons.push(new UIButton(70, SIZE_Y - 50, 50, 20, "LED", LED, null, null, (inputs, int, pout) => {
+            return inputs[0];
+        }));
+        this.buttons.push(new UIButton(140, SIZE_Y - 50, 50, 20, "SWT", Switch, null, null, (inputs, int, pout) => {
+            return inputs[0];
         }));
     }
 
@@ -402,6 +524,11 @@ function mousePressed()
 
     if(readyToSelect.gate != null)
     {
+        if(readyToSelect.gate.type == "SWT")
+        {
+            readyToSelect.gate.click();
+        }
+
         if(readyToSelect.side == LEFT)
         {
             let gate_input_pos = readyToSelect.gate.firstAvailableInputPos();
